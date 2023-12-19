@@ -1,44 +1,42 @@
 #include <stdio.h>
-
-int m, n;
-int* tab;
-
-void generateTable(int m, int n, int* tab)
-{
-    int i = 0;
-    for (int j = m; j < n; j++)
-    {
-        printf("%d, ", j);
-        tab[i] = j;
-        i++;
-    }
-}
+#include <stdlib.h>
 
 int main() 
 {
-    while(1)
+    int m, n;
+
+    while (1)
     {
-        printf("%s\n", "Wprowadz dolna granice:");
-        scanf("%d", &m);
+        printf("%s\n", "Wprowadz dolna granica:");
+        scanf_s("%d", &m);
+
         printf("%s\n", "Wprowadz gorna granice:");
-        scanf("%d", &n);
+        scanf_s("%d", &n);
 
-        if (m < n)
+        if (m < n) 
         {
-            break;
+            break;  
         }
-        
-        printf("%s\n", "Dolna granica musi byc mniejsza od gornej!");
+
+        printf("%s\n", "Dolna granica musi byc mniejsza od gornej granicy!");
     }
-    
-    printf("Przedzial od %d do %d\n", m, n);
 
-    generateTable(m, n, tab);
+    int arraySize = n - m + 1;
 
-    // for (int i = 0; i < sizeof(tab) / sizeof(tab[0]); i++)
-    // {
-    //     printf("%d, \n", tab[i]);
-    // }
+    int* numbersArray = (int*)malloc(arraySize * sizeof(int));
 
-    return 0;
+    if (numbersArray == NULL) {
+        printf("Memory allocation failed.\n");
+        return 1;  
+    }
+
+    for (int i = 0; i < arraySize; i++) {
+        numbersArray[i] = m + i;
+    }
+
+
+
+    free(numbersArray);
+
+    return 0; 
 }
