@@ -4,6 +4,17 @@
 #include <time.h>
 #include <omp.h>
 
+bool isPrime1(int number)
+{
+    for (int i = 2; i * i <= number; i++)
+	{
+		if (number % i == 0)
+		{
+			return false;
+		}
+	}
+}
+
 void sieveOfEratosthenes1(int m, int n, int** array, int* size) 
 {
     for (int i = 2; i * i <= n; i++) 
@@ -91,28 +102,28 @@ int main()
     // Input
     while (1) 
     {
-        printf("%s\n", "Enter the lower bound:");
+        printf("%s\n", "Wprowadz dolna granice:");
         scanf_s("%d", &m);
 
         if (m < 2) 
         {
-            printf("%s\n", "Lower bound must be greater than 1!");
+            printf("%s\n", "Dolna granica musi byc wieksza, badz równa 2!");
             continue;
         }
 
-        printf("%s\n", "Enter the upper bound:");
+        printf("%s\n", "Wprowadz gorna granice:");
         scanf_s("%d", &n);
 
         if (m >= n)         
         {
-            printf("%s\n", "Lower bound must be less than the upper bound!");
+            printf("%s\n", "Dolna granica musi byc mniejsza od gornej granicy!");
             continue;
         }
 
-        printf("%s\n %s\n %s\n", "Choose:", "1 - Sequential", "2 - Parallel");
+        printf("%s\n %s\n %s\n %s\n %s\n %s\n", "Wybierz sposob:", "1 - Dzielenie sekwencyjne", "2 - Dzielenie rownolegle", "3 - Usuwanie liczb zlozonych sekwencyjnie", "4 - Usuwanie liczb zlozonych rownolegle domenowo", "5 - Usuwanie liczb zlozonych rownolegle funkcyjnie");
         scanf_s("%d", &choice);
 
-        if (choice == 1 || choice == 2) 
+        if (choice == 1 || choice == 2 || choice == 3 || choice == 4 || choice == 5)
 		{
             break;
 		}
@@ -137,48 +148,89 @@ int main()
 
     int newSize = 0;
     
-    if (choice == 1) 
+    if (choice == 1)
+    {
+        bool coma = false;
+        start = clock();
+        printf("Modified array with prime numbers: [");
+        for (int i = m; i <= n; i++)
+        {
+            if (i != 0 && isPrime1(i) && coma)
+            {
+                printf(", ");
+            }
+            if (isPrime1(i))
+			{
+                printf("%d", i);
+                if (!coma)
+                {
+					coma = true;
+                }
+			}
+        }
+        printf("]\n");
+        end = clock();
+    }
+    else if (choice == 2)
+    {
+        printf("%d\n", choice);
+    }
+    else if (choice == 3) 
 	{
-		printf("%s\n", "Sequential");
         // Apply the Sieve of Eratosthenes to filter prime numbers
         start = clock();
         sieveOfEratosthenes1(m, n, &numbersArray, &newSize);
         end = clock();
+
+        // Display the modified array with prime numbers
+        printf("Modified array with prime numbers: [");
+        for (int i = 0; i < newSize - 1; i++)
+        {
+            printf("%d, ", numbersArray[i]);
+        }
+        if (newSize > 0)
+        {
+            printf("%d", numbersArray[newSize - 1]);
+        }
+        printf("]\n");
 	}
-	else if (choice == 2) 
+	else if (choice == 4) 
 	{
-		printf("%s\n", "Parallel");
-        start = clock();
         // Apply the Sieve of Eratosthenes to filter prime numbers
+        start = clock();
 #pragma omp parallel for
-        for (int i = 0; i < arraySize/16; i += 16) 
+        for (int i = 0; i < arraySize; i += 16) 
 		{
             sieveOfEratosthenes2(i, numbersArray[i], numbersArray[i + 16], &numbersArray, &newSize);
 		}
 
         numbersArray = realloc(numbersArray, newSize * sizeof(int));
         end = clock();
+
+        // Display the modified array with prime numbers
+        printf("Modified array with prime numbers: [");
+        for (int i = 0; i < newSize - 1; i++) 
+        {
+            printf("%d, ", numbersArray[i]);
+        }
+        if (newSize > 0) 
+        {
+            printf("%d", numbersArray[newSize - 1]);
+        }
+        printf("]\n");
 	}
+    else if (choice == 5)
+    {
+        printf("%d\n", choice);
+    }
 	else 
 	{
 		printf("%s\n", "Oops something went wrong!");
 		return 1;
 	}
 
-    // Display the modified array with prime numbers
-    printf("Modified array with prime numbers: [");
-    for (int i = 0; i < newSize - 1; i++) 
-    {
-        printf("%d, ", numbersArray[i]);
-    }
-    if (newSize > 0) 
-    {
-        printf("%d", numbersArray[newSize - 1]);
-    }
-    printf("]\n");
-
     // Display the execution time
-    printf("Execution time: %f seconds\n", (double)(end - start) / CLOCKS_PER_SEC);
+    printf("\nExecution time: %f seconds\n\n", (double)(end - start) / CLOCKS_PER_SEC);
 
     // Free allocated memory
     free(numbersArray);
