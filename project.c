@@ -4,7 +4,7 @@
 #include <time.h>
 #include <omp.h>
 
-bool isPrime1(int number)
+bool isPrime(int number)
 {
     for (int i = 2; i * i <= number; i++)
 	{
@@ -13,13 +13,36 @@ bool isPrime1(int number)
 			return false;
 		}
 	}
+    return true;
 }
 
-void sieveOfEratosthenes1(int m, int n, int** array, int* size) 
+void division(int m, int n, int** array)
+{
+    for (int i = m; i <= n; i++)
+    {
+        if (!isPrime(i))
+        {
+            (*array)[i - m] = 1;
+        }
+    }
+}
+
+void divisionParallel(int m, int n, int** array)
+{
+#pragma omp parallel for num_threads(4)
+	for (int i = m; i <= n; i++)
+	{
+		if (!isPrime(i))
+		{
+			(*array)[i - m] = 1;
+		}
+	}
+}
+
+void sieveOfEratosthenesSequential(int m, int n, int** array) 
 {
     for (int i = 2; i * i <= n; i++) 
 	{
-        printf("%s %d\n", "Usuwanie wielokrotnosci liczby: ", i);
 		for (int j = 0; j < n - m + 1;)
 		{
             if ((*array)[j] == 1)
@@ -38,37 +61,55 @@ void sieveOfEratosthenes1(int m, int n, int** array, int* size)
 			}
 		}
 	}
-
-    for (int i = 0; i < n - m + 1; i++)
-    {
-        if ((*array)[i] == 1)
-		{
-			(*array)[i] = 0;
-		}
-    }
-
-    int j = 0;
-    for (int i = 0; i < n - m + 1; i++) 
-    {
-        if ((*array)[i])
-        {
-            (*array)[j++] = m + i;
-        }
-    }
-
-    *array = realloc(*array, j * sizeof(int));
-    *size = j;
 }
 
-void sieveOfEratosthenes2(int m, int n, int** array, int* size)
+void sieveOfEratosthenesParallelDomainwise(int m, int n, int** array)
 {
-    int index = 0;
 #pragma omp parallel for num_threads(4)
-    for (int i = index; i < n - m + 1; i += 16)
+    for (int i = 0; i < omp_get_num_threads(); i++)
+    {
+        int domainSize = (n - m + 1) / omp_get_num_threads();
+        int startIndex = omp_get_thread_num() * domainSize;
+        int endIndex = (omp_get_thread_num() == omp_get_num_threads() - 1) ? n - m + 1 : startIndex + domainSize;
+
+        for (int j = startIndex; j < endIndex; j += 16)
+        {
+            for (int k = 2; k * k <= endIndex; k++)
+            {
+                for (int l = j; l < j + 16;)
+                {
+                    if ((*array)[l] == 0)
+                    {
+                        break;
+                    }
+                    if ((*array)[l] == 1)
+                    {
+                        l++;
+                        continue;
+                    }
+                    if ((*array)[l] % k == 0 && (*array)[l] != k)
+                    {
+                        (*array)[l] = 1;
+                        l += k;
+                    }
+                    else
+                    {
+                        l++;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void sieveOfEratosthenesParallelFunctionally(int m, int n, int** array)
+{
+#pragma omp parallel for num_threads(4)
+    for (int i = 0; i < n - m + 1; i += 16)
 	{
         for (int j = 2; j * j <= n; j++)
         {
-            for (int k = 0; k < n - m + 1;)
+            for (int k = i; k < i + 16;)
             {
                 if ((*array)[k] == 1)
                 {
@@ -87,7 +128,24 @@ void sieveOfEratosthenes2(int m, int n, int** array, int* size)
             }
         }
 	}
+}
 
+void printArray(int* array, int size) 
+{
+    printf("Zmodyfikowana tablica z liczbami pierwszymi: [");
+    for (int i = 0; i < size - 1; i++)
+    {
+        printf("%d, ", array[i]);
+    }
+    if (size > 0)
+    {
+        printf("%d", array[size - 1]);
+    }
+    printf("]\n");
+}
+
+void changeArray(int m, int n, int** array, int* size) 
+{
     for (int i = 0; i < n - m + 1; i++)
     {
         if ((*array)[i] == 1)
@@ -114,7 +172,6 @@ int main()
     int m, n, choice;
     clock_t start, end;
 
-    // Input
     while (1) 
     {
         printf("%s\n", "Wprowadz dolna granice:");
@@ -146,7 +203,6 @@ int main()
 		printf("%s\n", "Nieprawidlowy wybor");
     }
 
-    // Generate an array of all numbers from m to n
     printf("Generowanie tablicy liczb od %d do %d...\n", m, n);
     int arraySize = n - m + 1;
     int* numbersArray = (int*)malloc(arraySize * sizeof(int));
@@ -167,85 +223,61 @@ int main()
     int newSize = 0;
     
     printf("Sprawdzanie liczb pierwszych...\n");
-    if (choice == 1)
-    {
-        bool coma = false;
-        start = clock();
-        printf("Zmodyfikowana tablica z liczbami pierwszymi: [");
-        for (int i = m; i <= n; i++)
-        {
-            if (i != 0 && isPrime1(i) && coma)
-            {
-                printf(", ");
-            }
-            if (isPrime1(i))
-			{
-                printf("%d", i);
-                if (!coma)
-                {
-					coma = true;
-                }
-			}
-        }
-        printf("]\n");
-        end = clock();
-    }
-    else if (choice == 2)
-    {
-        printf("%d\n", choice);
-    }
-    else if (choice == 3) 
-	{
-        // Apply the Sieve of Eratosthenes to filter prime numbers
-        start = clock();
-        sieveOfEratosthenes1(m, n, &numbersArray, &newSize);
-        end = clock();
 
-        // Display the modified array with prime numbers
-        printf("Zmodyfikowana tablica z liczbami pierwszymi: [");
-        for (int i = 0; i < newSize - 1; i++)
-        {
-            printf("%d, ", numbersArray[i]);
-        }
-        if (newSize > 0)
-        {
-            printf("%d", numbersArray[newSize - 1]);
-        }
-        printf("]\n");
-	}
-	else if (choice == 4) 
-	{
-        // Apply the Sieve of Eratosthenes to filter prime numbers
-        start = clock();
-        sieveOfEratosthenes2(m, n, &numbersArray, &newSize);
-        end = clock();
-
-        // Display the modified array with prime numbers
-        printf("Zmodyfikowana tablica z liczbami pierwszymi: [");
-        for (int i = 0; i < newSize - 1; i++)
-        {
-            printf("%d, ", numbersArray[i]);
-        }
-        if (newSize > 0) 
-        {
-            printf("%d", numbersArray[newSize - 1]);
-        }
-        printf("]\n");
-	}
-    else if (choice == 5)
+    switch (choice)
     {
-        printf("%d\n", choice);
-    }
-	else 
-	{
-		printf("%s\n", "Ups cos poszlo nie tak!");
-		return 1;
-	}
+        case 1:
+        {
+            start = clock();
+            division(m, n, &numbersArray);
+            end = clock();
 
-    // Display the execution time
+            break;
+        }
+        case 2:
+        {
+            start = clock();
+            divisionParallel(m, n, &numbersArray);
+            end = clock();
+
+            break;
+        }
+        case 3:
+        {
+            start = clock();
+            sieveOfEratosthenesSequential(m, n, &numbersArray);
+            end = clock();
+
+            break;
+        }
+        case 4:
+        {
+            start = clock();
+            sieveOfEratosthenesParallelDomainwise(m, n, &numbersArray);
+            end = clock();
+
+            break;
+        }
+        case 5:
+		{
+            start = clock();
+            sieveOfEratosthenesParallelFunctionally(m, n, &numbersArray);
+            end = clock();
+
+            break;
+		}
+        default:
+        {
+            printf("%s\n", "Ups cos poszlo nie tak!");
+            return 1;
+        }
+    }
+
+    changeArray(m, n, &numbersArray, &newSize);
+    //printArray(numbersArray, newSize);
+
     printf("\nCzas wykonania algorytmu: %f sekund\n\n", (double)(end - start) / CLOCKS_PER_SEC);
 
-    // Free allocated memory
     free(numbersArray);
 
     return 0;
