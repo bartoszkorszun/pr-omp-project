@@ -29,7 +29,7 @@ void division(int m, int n, int** array)
 
 void divisionParallel(int m, int n, int** array)
 {
-#pragma omp parallel for num_threads(4)
+#pragma omp parallel for num_threads(8) schedule(dynamic, 1)
 	for (int i = m; i <= n; i++)
 	{
 		if (!isPrime(i))
@@ -41,31 +41,20 @@ void divisionParallel(int m, int n, int** array)
 
 void sieveOfEratosthenesSequential(int m, int n, int** array) 
 {
-    for (int i = 2; i * i <= n; i++) 
-	{
-		for (int j = 0; j < n - m + 1;)
-		{
-            if ((*array)[j] == 1)
-			{
-				j++;
-				continue;
-			}
-			if ((*array)[j] % i == 0 && (*array)[j] != i)
-			{
-				(*array)[j] = 1;
-                j += i;
-			}
-			else
-			{
-				j++;
-			}
-		}
-	}
+    for (int i = 2; i * i <= n; i++)
+    {
+        int start = (m > i * i) ? m : i * i;
+
+        for (int j = start; j <= n; j += i)
+        {
+            (*array)[j - m] = 1;
+        }
+    }
 }
 
 void sieveOfEratosthenesParallelDomainwise(int m, int n, int** array)
 {
-#pragma omp parallel for num_threads(4)
+#pragma omp parallel for num_threads(8) schedule(dynamic, 1)
     for (int i = 0; i < omp_get_num_threads(); i++)
     {
         int domainSize = (n - m + 1) / omp_get_num_threads();
@@ -104,7 +93,7 @@ void sieveOfEratosthenesParallelDomainwise(int m, int n, int** array)
 
 void sieveOfEratosthenesParallelFunctionally(int m, int n, int** array)
 {
-#pragma omp parallel for num_threads(4)
+#pragma omp parallel for num_threads(8) schedule(dynamic, 1)
     for (int i = 0; i < n - m + 1; i += 16)
 	{
         for (int j = 2; j * j <= n; j++)
