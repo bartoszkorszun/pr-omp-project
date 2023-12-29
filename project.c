@@ -54,37 +54,30 @@ void sieveOfEratosthenesSequential(int m, int n, int** array)
 
 void sieveOfEratosthenesParallelDomainwise(int m, int n, int** array)
 {
-#pragma omp parallel for num_threads(8) schedule(dynamic, 1)
-    for (int i = 0; i < omp_get_num_threads(); i++)
+#pragma omp parallel num_threads(8)
     {
-        int domainSize = (n - m + 1) / omp_get_num_threads();
-        int startIndex = omp_get_thread_num() * domainSize;
-        int endIndex = (omp_get_thread_num() == omp_get_num_threads() - 1) ? n - m + 1 : startIndex + domainSize;
+        int numThreads = omp_get_num_threads();
+        int domainSize = (n - m + 1) / numThreads;
+        int threadIndex = omp_get_thread_num();
+        int startIndex = m + threadIndex * domainSize;
+        int endIndex = (threadIndex == numThreads - 1) ? n + 1 : startIndex + domainSize;
 
-        for (int j = startIndex; j < endIndex; j += 16)
+        for (int i = 2; i * i <= n; i++)
         {
-            for (int k = 2; k * k <= endIndex; k++)
+            if (i * i > endIndex)
             {
-                for (int l = j; l < j + 16;)
+                break; 
+            }
+
+            int startMultiple = (startIndex > i * i) ? startIndex : i * i;
+
+            int multiple = (startMultiple % i == 0) ? startMultiple : (startMultiple / i + 1) * i;
+
+            for (int j = multiple; j < endIndex; j += i)
+            {
+                if ((*array)[j - m] != 1)
                 {
-                    if ((*array)[l] == 0)
-                    {
-                        break;
-                    }
-                    if ((*array)[l] == 1)
-                    {
-                        l++;
-                        continue;
-                    }
-                    if ((*array)[l] % k == 0 && (*array)[l] != k)
-                    {
-                        (*array)[l] = 1;
-                        l += k;
-                    }
-                    else
-                    {
-                        l++;
-                    }
+                    (*array)[j - m] = 1;
                 }
             }
         }
@@ -263,7 +256,7 @@ int main()
     }
 
     changeArray(m, n, &numbersArray, &newSize);
-    //printArray(numbersArray, newSize);
+    printArray(numbersArray, newSize);
 
     printf("\nCzas wykonania algorytmu: %f sekund\n\n", (double)(end - start) / CLOCKS_PER_SEC);
 
