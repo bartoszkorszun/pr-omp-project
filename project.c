@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <omp.h>
+#include <math.h>
 
 bool isPrime(int number)
 {
@@ -44,10 +45,14 @@ void sieveOfEratosthenesSequential(int m, int n, int** array)
     for (int i = 2; i * i <= n; i++)
     {
         int start = (m > i * i) ? m : i * i;
+        int multiple = (start % i == 0) ? start : (start / i + 1) * i;
 
-        for (int j = start; j <= n; j += i)
+        for (int j = multiple; j <= n; j += i)
         {
-            (*array)[j - m] = 1;
+            if (j >= i && (*array)[j - m] != i)  
+            {
+                (*array)[j - m] = 1;
+            }
         }
     }
 }
@@ -62,7 +67,7 @@ void sieveOfEratosthenesParallelDomainwise(int m, int n, int** array)
         int startIndex = m + threadIndex * domainSize;
         int endIndex = (threadIndex == numThreads - 1) ? n + 1 : startIndex + domainSize;
 
-        for (int i = 2; i * i <= n; i++)
+        for (int i = 2; i * i <= m + endIndex; i++)
         {
             if (i * i > endIndex)
             {
@@ -70,7 +75,6 @@ void sieveOfEratosthenesParallelDomainwise(int m, int n, int** array)
             }
 
             int startMultiple = (startIndex > i * i) ? startIndex : i * i;
-
             int multiple = (startMultiple % i == 0) ? startMultiple : (startMultiple / i + 1) * i;
 
             for (int j = multiple; j < endIndex; j += i)
@@ -86,37 +90,32 @@ void sieveOfEratosthenesParallelDomainwise(int m, int n, int** array)
 
 void sieveOfEratosthenesParallelFunctionally(int m, int n, int** array)
 {
-#pragma omp parallel for num_threads(8) schedule(dynamic, 1)
-    for (int i = 0; i < n - m + 1; i += 16)
-	{
-        for (int j = 2; j * j <= n; j++)
+    int root = sqrt(n);
+#pragma omp parallel for num_threads(8)
+    for (int i = 2; i <= root; i++)
+    {
+        int start = (m > i * i) ? m : i * i;
+        int multiple = (start % i == 0) ? start : (start / i + 1) * i;
+
+        for (int j = multiple; j <= n; j += i)
         {
-            for (int k = i; k < i + 16;)
+            if (j >= i && (*array)[j - m] != i)
             {
-                if ((*array)[k] == 1)
-                {
-                    k++;
-                    continue;
-                }
-                if ((*array)[k] % j == 0 && (*array)[k] != j)
-                {
-                    (*array)[k] = 1;
-                    k += j;
-                }
-                else
-                {
-                    k++;
-                }
+                (*array)[j - m] = 1;
             }
         }
-	}
+    }
 }
 
 void printArray(int* array, int size) 
 {
-    printf("Zmodyfikowana tablica z liczbami pierwszymi: [");
+    printf("Zmodyfikowana tablica z liczbami pierwszymi: \n[");
     for (int i = 0; i < size - 1; i++)
     {
+        if (i != 0 && i % 10 == 0)
+		{
+			printf("\n");
+		}
         printf("%d, ", array[i]);
     }
     if (size > 0)
@@ -161,7 +160,7 @@ int main()
 
         if (m < 2) 
         {
-            printf("%s\n", "Dolna granica musi byc wieksza, badz równa 2!");
+            printf("%s\n", "Dolna granica musi byc wieksza, badz rowna 2!");
             continue;
         }
 
@@ -256,7 +255,7 @@ int main()
     }
 
     changeArray(m, n, &numbersArray, &newSize);
-    printArray(numbersArray, newSize);
+    //printArray(numbersArray, newSize);
 
     printf("\nCzas wykonania algorytmu: %f sekund\n\n", (double)(end - start) / CLOCKS_PER_SEC);
 
